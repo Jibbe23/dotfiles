@@ -1,0 +1,40 @@
+name: "Build Container Image"
+description: "Building the givern Docker or Containerfile and pushing to registry"
+inputs:
+  flavor:
+    description: "Flavor of the image to use in tag"
+    required: false
+    default: "base"
+outputs:
+  build_tag:
+    description: "Lowercase string"
+    value: ${{ steps.image_tag.outputs.lowercase }}
+runs:
+  using: composite
+  steps:
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{  env.GITHUB_TOKEN  }}
+    - name: Lowercase Image Name
+      id: image_tag
+      uses: ASzc/change-string-case-action@v5
+      with:
+        string: ${{ env.REGISTRY_IMAGE_TAG }}:${{ inputs.flavor }}
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        load: true
+        push: false
+        tags: ${{ steps.image_tag.outputs.lowercase }}
+    - name: Export rootfs
+      shell: bash
+      run: |
+          docker create --name coffedora ${{ steps.image_tag.outputs.lowercase }}
+          docker export coffedora -o rootfs.tar.gz
+          docker rm coffedora

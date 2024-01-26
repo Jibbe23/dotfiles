@@ -1,0 +1,29 @@
+name: Workflow for Coffedora
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_USER: ${{ github.repository_owner }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  REGISTRY_IMAGE_TAG:  ghcr.io/${{ github.repository }}
+jobs:
+  build-baseimage:
+    # Only deploys the branch named "live". Ignores all other branches, to allow
+    # having "development" branches without interfering with GHCR image uploads.
+    name: Build Baseimage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      # You cannot use your own actions without to checkout
+      - name: Checkout Push to Registry action
+        uses: actions/checkout@v4
+      - name: Build base image
+        uses: ./.github/actions/build
+        id: image
+      - name: Release image rootfs
+        uses: ./.github/actions/release
+        id: rootfs
